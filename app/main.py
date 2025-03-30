@@ -5,6 +5,13 @@ from faiss_db import init_faiss_index
 
 torch.classes.__path__ = []  # add this line to manually set it to empty.
 
+# Configuração inicial (primeira linha do script)
+st.set_page_config(
+    page_title="Sistema Vetorial",
+    page_icon="🧠",
+    layout="wide"
+)
+
 
 def main():
     init_faiss_index()

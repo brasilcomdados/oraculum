@@ -12,6 +12,7 @@ from langchain_openai import (
 )
 from langchain_community.vectorstores import FAISS
 import streamlit as st  # Adição importante para acessar secrets
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 load_dotenv()
 
@@ -19,6 +20,8 @@ load_dotenv()
 INDEX_DIR = os.getenv("INDEX_DIR", "data/faiss_index")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 MODEL_EMBEDDING = os.getenv("MODEL_EMBEDDING", "text-embedding-3-small")
+DEFAULT_CHUNK_SIZE = int(os.getenv("DEFAULT_CHUNK_SIZE", 1000))
+DEFAULT_CHUNK_OVERLAP = int(os.getenv("DEFAULT_CHUNK_OVERLAP", 200))
 
 
 def get_embeddings():
@@ -43,31 +46,42 @@ def init_faiss_index():
         st.toast("Índice FAISS inicializado com sucesso")
 
 
-def add_document_to_index(document_text: str, filename: str):  # Adicione parâmetro filename
+def add_document_to_index(document_text: str, filename: str,
+                          chunk_size: int = DEFAULT_CHUNK_SIZE,
+                          chunk_overlap: int = DEFAULT_CHUNK_OVERLAP):
     """
-    Adiciona documento com metadados ao índice FAISS
+    Adiciona documento com chunking controlado
     """
-    embeddings = get_embeddings()
+    # Cria o splitter com parâmetros configuráveis
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+        separators=["\n\n", "\n", ". ", "! ", "? ", "; ", ", ", " "]
+    )
 
-    # Metadados para armazenar origem do documento
-    metadatas = [{"source": filename}]
+    # Divide o documento em chunks
+    chunks = text_splitter.split_text(document_text)
+
+    # Prepara metadados para cada chunk
+    metadatas = [{"source": filename} for _ in chunks]
+
+    embeddings = get_embeddings()
 
     if os.path.exists(INDEX_DIR):
         index = FAISS.load_local(INDEX_DIR, embeddings, allow_dangerous_deserialization=True)
         index.add_texts(
-            texts=[document_text],
-            metadatas=metadatas  # Adicione metadados
+            texts=chunks,
+            metadatas=metadatas
         )
     else:
         index = FAISS.from_texts(
-            texts=[document_text],
+            texts=chunks,
             embedding=embeddings,
-            metadatas=metadatas  # Adicione metadados
+            metadatas=metadatas
         )
 
     index.save_local(INDEX_DIR)
     return index
-
 
 def search_documents(query: str, k: int = 4):
     """
