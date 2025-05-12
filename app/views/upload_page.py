@@ -11,39 +11,27 @@ load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-
+#sugestão de melhoria: modificar o modelo para gpt-4o inserindo menos ruído com a necesidade de luz 
 def format_with_ai(text: str) -> str:
     """
     Melhora a formatação de documentos Markdown mantendo a integridade das informações
     """
     try:
         prompt = ChatPromptTemplate.from_messages([
-            ("system", """Você é um especialista em formatação de documentos técnicos. Reformate o texto seguindo estas regras:
+            ("system", """Você é um paisagista especializado em palmeiras e gramíneas. Reformate descrições botânicas seguindo esta estrutura:
 
-            1. **Estruturação lógica:**
-               - Use headers hierárquicos (#, ##, ###)
-               - Organize conteúdo relacionado em seções
-               - Mantenha a ordem original das informações
+            1. **Classificação Botânica**: nome científico (_itálico_), nome popular, origem, família
+            2. **Necessidade de Luz**: sol pleno, meia sombra, sombra; relacione com horas de luz direta/indireta
+            3. **Distribuição Natural**: localização nativa e ecossistema
+            4. **Descrição Morfológica**: altura, tronco, folhas, flores, frutos (com destaque **negrito** para características)
+            5. **Cultivo**: tolerância climática, tipo de solo, exigência hídrica
+            6. **Aplicações Paisagísticas**: sugestões de uso em projetos
+            7. **Cuidado e Manutenção**: podas, irrigação, pragas
+            8. **Conservação**: status IUCN, ameaças
 
-            2. **Formatação consistente:**
-               - Dados numéricos: padrão local (ex: R$ 1.234,56 ou 12.345,67 unidades)
-               - Listas: use marcadores ou numeração quando apropriado
-               - Tabelas: para dados tabulares com mais de 3 itens
-               - Ênfase: use **negrito** para termos técnicos e _itálico_ para termos estrangeiros
-
-            3. **Preservação de conteúdo:**
-               - Nunca altere valores ou informações
-               - Mantenha termos técnicos originais
-               - Preserve referências a arquivos e metadados ([nome_arquivo])
-
-            4. **Melhoria de legibilidade:**
-               - Adicione espaçamento lógico entre seções
-               - Quebras de linha para parágrafos longos
-               - Links clicáveis quando detectar URLs
-
-            Input: Texto Markdown cru extraído de documentos variados
-            Output: Versão formatada seguindo padrões técnicos"""),
-            ("human", "Texto original:\n{text}\n\nTexto reformatado:")
+            Use cabeçalhos hierárquicos (#, ##) e destaque termos técnicos. Nunca invente informações.
+            """),
+            ("human", "Texto original:\n{text}\n\nTexto formatado:")
         ])
 
         chain = prompt | ChatOpenAI(
@@ -67,12 +55,14 @@ def show():
 
     # Sidebar para upload
     st.sidebar.header("Opções de Upload")
+    global uploaded_file
     uploaded_file = st.sidebar.file_uploader("Selecione um arquivo", type=["pdf", "docx", "txt", "md"])
 
     if uploaded_file:
         if st.sidebar.button("Processar arquivo"):
             with st.spinner("Processando arquivo..."):
                 try:
+                    global md_content
                     md_content = convert_file_to_md(uploaded_file)
                     persist_document(uploaded_file.name, md_content)
                     st.session_state.last_uploaded = f"{uploaded_file.name.rsplit('.', 1)[0]}.md"
@@ -154,3 +144,11 @@ def show():
 
     else:
         st.info("Nenhum arquivo processado ainda.")
+
+from augmentador_botanico import processar_documento_botanico
+
+...
+
+msg = processar_documento_botanico(uploaded_file.name, md_content)
+if "enriquecida" in msg:
+    st.toast(msg, icon="🌿")
